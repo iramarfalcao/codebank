@@ -15,6 +15,10 @@ func NewKafkaProducer() KafkaProducer {
 func (k *KafkaProducer) SetupProducer(bootstrapServer string) {
 	configMap := &ckafka.ConfigMap{
 		"bootstrap.servers": bootstrapServer,
+		// "security.protocol": os.Getenv("security.protocol"),
+		// "sasl.mechanisms":   os.Getenv("sasl.mechanisms"),
+		// "sasl.username":     os.Getenv("sasl.username"),
+		// "sasl.password":     os.Getenv("sasl.password"),
 	}
 	k.Producer, _ = ckafka.NewProducer(configMap)
 }

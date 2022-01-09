@@ -10,8 +10,16 @@ import (
 	"github.com/iramarfalcao/codebank/infrastructure/kafka"
 	"github.com/iramarfalcao/codebank/infrastructure/repository"
 	"github.com/iramarfalcao/codebank/usecase"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("error loading .env file")
+	}
+}
 
 func main() {
 	db := setupDb()

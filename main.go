@@ -6,20 +6,32 @@ import (
 	"log"
 	"os"
 
+	"github.com/iramarfalcao/codebank/infrastructure/grpc/server"
+	"github.com/iramarfalcao/codebank/infrastructure/kafka"
 	"github.com/iramarfalcao/codebank/infrastructure/repository"
 	"github.com/iramarfalcao/codebank/usecase"
+	_ "github.com/lib/pq"
 )
 
 func main() {
 	db := setupDb()
 	defer db.Close()
+	producer := setupKafkaProducer()
+	processTransactionUseCase := setupTransactionUseCase(db, producer)
+	serveGrpc(processTransactionUseCase)
 }
 
-func setupTransactionUseCase(db *sql.DB) usecase.UseCaseTransaction {
+func setupTransactionUseCase(db *sql.DB, producer kafka.KafkaProducer) usecase.UseCaseTransaction {
 	transactionRepository := repository.NewTransactionRepositoryDB(db)
 	useCase := usecase.NewUseCaseTransaction(transactionRepository)
-	// useCase.KafkaProducer = producer
+	useCase.KafkaProducer = producer
 	return useCase
+}
+
+func setupKafkaProducer() kafka.KafkaProducer {
+	producer := kafka.NewKafkaProducer()
+	producer.SetupProducer(os.Getenv("KafkaBootstrapServers"))
+	return producer
 }
 
 func setupDb() *sql.DB {
@@ -30,9 +42,32 @@ func setupDb() *sql.DB {
 		os.Getenv("password"),
 		os.Getenv("dbname"),
 	)
+
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		log.Fatal("error connection to database")
+		log.Fatal("error connection to database", err)
 	}
 	return db
 }
+
+func serveGrpc(processTransactionUseCase usecase.UseCaseTransaction) {
+	grpcServer := server.NewGRPCServer()
+	grpcServer.ProcessTransactionUseCase = processTransactionUseCase
+	fmt.Println("Running gRPC Server")
+	grpcServer.Serve()
+}
+
+// cc := domain.NewCreditCard()
+// cc.Number = "1234"
+// cc.Name = "Iramar"
+// cc.ExpirationYear = 2021
+// cc.ExpirationMonth = 7
+// cc.CVV = 123
+// cc.Limit = 1000
+// cc.Balance = 0
+
+// repo := repository.NewTransactionRepositoryDB(db)
+// err := repo.CreateCreditCard(*cc)
+// if err != nil {
+// 	fmt.Println(err)
+// }
